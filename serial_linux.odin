@@ -3,6 +3,7 @@ package serial
 import "core:c"
 import "core:fmt"
 import "core:os/os2"
+import "core:sys/linux"
 
 foreign import libc "system:c"
 
@@ -58,7 +59,7 @@ close :: proc(s: ^Serial) {
 
 read_stdin :: proc(buf: []u8) -> (int, Result) {
 	n, err := os2.read(os2.stdin, buf)
-	if err != nil {
+	if err != nil && err != .EOF {
 		err_str := os2.error_string(err)
 		fmt.eprintln("stdin:", err_str)
 		return 0, .Fail
@@ -67,6 +68,41 @@ read_stdin :: proc(buf: []u8) -> (int, Result) {
 }
 
 read :: proc(s: ^Serial, buf: []u8) -> (int, Result) {
+	{
+		pfds: [1]linux.Poll_Fd = {
+			{
+				fd = linux.Fd(os2.fd(s.handle)),
+				events = {.IN},
+			},
+		}
+		ts: linux.Time_Spec = {
+			time_sec  = 0,
+			time_nsec = 100_000_000,
+		}
+		n, err := linux.ppoll(pfds[:], &ts, nil)
+		if err != .NONE {
+			fmt.eprintln("ppoll err:", err)
+			return 0, .Fail
+		}
+
+		if n == 0 {
+			return 0, .Okay
+		}
+
+		if .HUP in pfds[0].revents {
+			fmt.eprintln("connection closed")
+			return 0, .Fail
+		}
+
+		if .ERR in pfds[0].revents {
+			fmt.eprintln("connection error")
+			return 0, .Fail
+		}
+
+		if .IN not_in pfds[0].revents {
+			return 0, .Okay
+		}
+	}
 	n, err := os2.read(s.handle, buf)
 	if err != nil && err != .EOF {
 		err_str := os2.error_string(err)

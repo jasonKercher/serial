@@ -174,7 +174,7 @@ read_stdin :: proc(buf: []u8) -> (read_len: int, res: Result) {
 		return 0, .Okay
 	}
 
-	if win32.ReadConsoleInputW(stdin, &event_buf[0], size_of(event_buf), &events_read) == win32.FALSE {
+	if win32.ReadConsoleInputW(stdin, &event_buf[0], len(event_buf), &events_read) == win32.FALSE {
 		_check_error("read stdin") or_return
 	}
 	for i: u32 = 0; i < events_read && read_len < len(buf); i += 1 {
@@ -265,12 +265,12 @@ _open :: proc(s: ^Serial, flags: bit_set[Flags]) -> Result {
 	_check_error("GetConsoleCP") or_return
 	s.out_cp = win32.GetConsoleOutputCP()
 	_check_error("GetConsoleOutputCP") or_return
-	s.restores += {.Codepage}
 
 	win32.SetConsoleCP(win32.CP_UTF8)
 	_check_error("SetConsoleCP") or_return
 	//win32.SetConsoleOutputCP(win32.CP_UTF8)
 	//_check_error("SetConsoleOutputCP") // or_return SEM_NOT_FOUND !?
+	s.restores += {.Codepage}
 
 	return .Okay
 }
