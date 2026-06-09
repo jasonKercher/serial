@@ -23,8 +23,8 @@ Serial :: struct {
 	handle: win32.HANDLE,
 	dcb: win32.DCB,
 	old_mode: win32.DWORD,
-	in_cp: win32.UINT,
-	out_cp: win32.UINT,
+	in_cp: win32.CODEPAGE,
+	out_cp: win32.CODEPAGE,
 	restores: bit_set[Restore],
 }
 
@@ -266,7 +266,7 @@ _open :: proc(s: ^Serial, flags: bit_set[Flags]) -> Result {
 	s.out_cp = win32.GetConsoleOutputCP()
 	_check_error("GetConsoleOutputCP") or_return
 
-	win32.SetConsoleCP(win32.CP_UTF8)
+	win32.SetConsoleCP(.UTF8)
 	_check_error("SetConsoleCP") or_return
 	//win32.SetConsoleOutputCP(win32.CP_UTF8)
 	//_check_error("SetConsoleOutputCP") // or_return SEM_NOT_FOUND !?
